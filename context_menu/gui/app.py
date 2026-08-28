@@ -69,6 +69,7 @@ class ContextMenuApp(tk.Tk):
 			header_actions,
 			text='🔄 Restart Explorer',
 			style='Primary.TButton',
+			command=self._on_restart_explorer
 		)
 
 		restart_exp_btn.pack(side=tk.RIGHT)
@@ -87,6 +88,7 @@ class ContextMenuApp(tk.Tk):
 			btn_group,
 			text='➕ Add Custom Item',
 			style='Success.TButton',
+			command=self._open_add_dialog
 		)
 
 		add_btn.pack(side=tk.LEFT, padx=3)
@@ -94,6 +96,7 @@ class ContextMenuApp(tk.Tk):
 		refresh_btn = ttk.Button(
 			btn_group,
 			text='🔄 Refresh',
+			command=self.refresh_all
 		)
 
 		refresh_btn.pack(side=tk.LEFT, padx=3)
