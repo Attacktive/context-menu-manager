@@ -53,8 +53,8 @@ class SystemTweaks:
 	@classmethod
 	def notify_shell_change(cls):
 		try:
-			# SHCNE_ASSOCCHANGED = 0x08000000, SHCNF_IDLIST = 0x0000
-			ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x0000, None, None)
+			# SHCNE_ASSOCCHANGED = 0x08000000, SHCNF_FLUSH = 0x1000
+			ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x1000, None, None)
 		except Exception:
 			pass
 
@@ -62,9 +62,20 @@ class SystemTweaks:
 	def restart_explorer(cls) -> Tuple[bool, str]:
 		try:
 			cls.notify_shell_change()
-			subprocess.run(['taskkill', '/f', '/im', 'explorer.exe'], capture_output=True, check=False)
-			# Start explorer detached
-			subprocess.Popen(['explorer.exe'], creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
+
+			subprocess.run(
+				['taskkill', '/f', '/im', 'explorer.exe'],
+				capture_output=True,
+				check=False
+			)
+
+			import time
+			time.sleep(0.5)
+
+			res = ctypes.windll.shell32.ShellExecuteW(None, 'open', 'explorer.exe', None, None, 1)
+			if res <= 32:
+				subprocess.Popen('start explorer.exe', shell=True)
+
 			return True, 'Windows Explorer restarted successfully!'
 		except Exception as e:
 			return False, f'Failed to restart explorer: {str(e)}'
