@@ -1,5 +1,6 @@
 """Modern dark theme styling for Tkinter and ttk widgets."""
 
+import contextlib
 import tkinter as tk
 from tkinter import ttk
 from typing import ClassVar
@@ -40,10 +41,8 @@ class Theme:
 		root.configure(bg=cls.BG_DARK)
 		style = ttk.Style(root)
 
-		try:
+		with contextlib.suppress(tk.TclError):
 			style.theme_use('clam')
-		except tk.TclError:
-			pass
 
 		cls._apply_frames_and_labels(style)
 		cls._apply_standard_buttons(style)

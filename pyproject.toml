@@ -1,0 +1,41 @@
+[project]
+name = "context-menu-manager"
+version = "0.1.0"
+description = "A lightweight native Windows GUI manager for context menu entries"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+context-menu-manager = "main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["context_menu"]
+
+[dependency-groups]
+dev = [
+	"ruff>=0.16.3",
+]
+
+[tool.ruff]
+target-version = "py310"
+# The formatter shares this value, and 320 is ruff's maximum, so this is as close as it gets to "never hard-wrap for width".
+line-length = 320
+
+[tool.ruff.format]
+indent-style = "tab"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+# E501: lines are soft-wrapped by the editor, never hard-wrapped for width.
+# SIM108: an if/else statement is preferred over a ternary expression.
+# W191/E101: tabs are the indent style here.
+ignore = ["E501", "SIM108", "W191", "E101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["context_menu"]

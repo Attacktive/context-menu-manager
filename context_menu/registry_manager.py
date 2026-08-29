@@ -1,5 +1,6 @@
 """Registry scanning, mutation, disabling, backup, and restore manager."""
 
+import contextlib
 import ctypes
 import datetime
 import json
@@ -523,15 +524,11 @@ class RegistryManager:
 		try:
 			with winreg.CreateKeyEx(target_root, item.key_path, 0, winreg.KEY_SET_VALUE) as key:
 				if enable:
-					try:
+					with contextlib.suppress(OSError):
 						winreg.DeleteValue(key, 'LegacyDisable')
-					except OSError:
-						pass
 
-					try:
+					with contextlib.suppress(OSError):
 						winreg.DeleteValue(key, 'ProgrammaticAccessOnly')
-					except OSError:
-						pass
 				else:
 					winreg.SetValueEx(key, 'LegacyDisable', 0, winreg.REG_SZ, '')
 
@@ -556,10 +553,8 @@ class RegistryManager:
 				winreg.KEY_SET_VALUE
 			) as key:
 				if enable:
-					try:
+					with contextlib.suppress(FileNotFoundError):
 						winreg.DeleteValue(key, clsid)
-					except FileNotFoundError:
-						pass
 				else:
 					winreg.SetValueEx(key, clsid, 0, winreg.REG_SZ, item.name)
 

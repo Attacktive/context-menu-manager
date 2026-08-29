@@ -1,5 +1,6 @@
 """Windows system tweaks and Explorer integration helpers."""
 
+import contextlib
 import ctypes
 import os
 import subprocess  # nosec B404
@@ -49,15 +50,11 @@ class SystemTweaks:
 
 				return True, 'Classic Windows 10 Context Menu enabled. Restart Explorer to apply.'
 
-			try:
+			with contextlib.suppress(FileNotFoundError):
 				winreg.DeleteKey(winreg.HKEY_CURRENT_USER, inproc_path)
-			except FileNotFoundError:
-				pass
 
-			try:
+			with contextlib.suppress(FileNotFoundError):
 				winreg.DeleteKey(winreg.HKEY_CURRENT_USER, cls.WIN11_CLASSIC_CLSID)
-			except FileNotFoundError:
-				pass
 
 			return True, 'Windows 11 Modern Context Menu restored. Restart Explorer to apply.'
 		except OSError as e:
@@ -66,11 +63,9 @@ class SystemTweaks:
 	@classmethod
 	def notify_shell_change(cls) -> None:
 		"""Notify the shell that associations and context menu extensions changed."""
-		try:
+		with contextlib.suppress(OSError):
 			# SHCNE_ASSOCCHANGED = 0x08000000, SHCNF_FLUSH = 0x1000
 			ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x1000, None, None)
-		except OSError:
-			pass
 
 	@classmethod
 	def restart_explorer(cls) -> tuple[bool, str]:
