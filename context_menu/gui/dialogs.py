@@ -82,7 +82,8 @@ class AddCustomItemDialog(tk.Toplevel):
 		form_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 14))
 
 		self._setup_category_and_name_inputs(form_frame)
-		self._setup_cmd_and_icon_inputs(form_frame)
+		self._setup_cmd_input(form_frame)
+		self._setup_icon_input(form_frame)
 		self._setup_position_input(form_frame)
 
 		form_frame.columnconfigure(1, weight=1)
@@ -112,7 +113,7 @@ class AddCustomItemDialog(tk.Toplevel):
 
 		self.name_entry.grid(row=1, column=1, columnspan=2, sticky=tk.EW, pady=6, padx=(10, 0), ipady=3)
 
-	def _setup_cmd_and_icon_inputs(self, frame: ttk.Frame) -> None:
+	def _setup_cmd_input(self, frame: ttk.Frame) -> None:
 		ttk.Label(frame, text='Command Line:', style='Card.TLabel', font=Theme.FONT_BOLD).grid(row=2, column=0, sticky=tk.W, pady=6)
 		self.command_entry = tk.Entry(
 			frame,
@@ -142,6 +143,7 @@ class AddCustomItemDialog(tk.Toplevel):
 
 		browse_cmd_btn.grid(row=2, column=2, sticky=tk.E, pady=6)
 
+	def _setup_icon_input(self, frame: ttk.Frame) -> None:
 		ttk.Label(frame, text='Icon (Optional):', style='Card.TLabel').grid(row=3, column=0, sticky=tk.W, pady=6)
 		self.icon_entry = tk.Entry(
 			frame,

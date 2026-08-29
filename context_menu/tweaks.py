@@ -80,6 +80,7 @@ class SystemTweaks:
 
 			sys_root = os.environ.get('SystemRoot', r'C:\Windows')
 			taskkill_path = os.path.join(sys_root, 'System32', 'taskkill.exe')
+			explorer_path = os.path.join(sys_root, 'explorer.exe')
 
 			subprocess.run(  # nosec B603
 				[taskkill_path, '/f', '/im', 'explorer.exe'],
@@ -89,9 +90,9 @@ class SystemTweaks:
 
 			time.sleep(0.5)
 
-			res = ctypes.windll.shell32.ShellExecuteW(None, 'open', 'explorer.exe', None, None, 1)
+			res = ctypes.windll.shell32.ShellExecuteW(None, 'open', explorer_path, None, None, 1)
 			if res <= 32:
-				os.startfile('explorer.exe')  # nosec B606
+				os.startfile(explorer_path)  # nosec B606
 
 			return True, 'Windows Explorer restarted successfully!'
 		except OSError as e:

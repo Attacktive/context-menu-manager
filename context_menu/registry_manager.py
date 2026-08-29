@@ -313,21 +313,25 @@ class RegistryManager:
 
 		return is_enabled, command
 
+	@staticmethod
+	def _extract_raw_clsid(key_name: str, values_dict: dict[str, tuple[Any, int]]) -> str:
+		if '' in values_dict:
+			raw_val = str(values_dict[''][0]).strip()
+			if raw_val.startswith('{') and raw_val.endswith('}'):
+				return raw_val
+
+		if key_name.startswith('{') and key_name.endswith('}'):
+			return key_name
+
+		return ''
+
 	def _parse_shellex_item(
 		self,
 		key_name: str,
 		values_dict: dict[str, tuple[Any, int]],
 		blocked_clsids: set[str]
 	) -> tuple[str, str, str, bool]:
-		clsid = ''
-		if '' in values_dict:
-			raw_clsid = str(values_dict[''][0]).strip()
-			if raw_clsid.startswith('{') and raw_clsid.endswith('}'):
-				clsid = raw_clsid
-
-		if not clsid and key_name.startswith('{') and key_name.endswith('}'):
-			clsid = key_name
-
+		clsid = self._extract_raw_clsid(key_name, values_dict)
 		if not clsid:
 			return key_name, '', 'COM Shell Extension', True
 
@@ -346,25 +350,22 @@ class RegistryManager:
 		file_desc: str | None
 	) -> str:
 		clean_key = key_name.strip()
-		has_key_alias = bool(clean_key and clean_key != clsid)
+		alias = None
+		if clean_key and clean_key != clsid:
+			alias = clean_key
 
-		if friendly_name:
-			if file_desc and friendly_name != file_desc:
-				return f'{friendly_name} [{file_desc}]'
+		if friendly_name and file_desc and friendly_name != file_desc:
+			return f'{friendly_name} [{file_desc}]'
 
-			if has_key_alias:
-				return f'{friendly_name} ({clean_key})'
+		base_label = friendly_name or file_desc
+		if base_label:
+			if alias:
+				return f'{base_label} ({alias})'
 
-			return friendly_name
+			return base_label
 
-		if file_desc:
-			if has_key_alias:
-				return f'{file_desc} ({clean_key})'
-
-			return file_desc
-
-		if has_key_alias:
-			return clean_key
+		if alias:
+			return alias
 
 		return f'Extension {clsid}'
 
@@ -664,19 +665,29 @@ class RegistryManager:
 		cmd_path = f'{verb_path}\\command'
 
 		try:
-			with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, verb_path, 0, winreg.KEY_SET_VALUE) as verb_key:
-				winreg.SetValueEx(verb_key, '', 0, winreg.REG_SZ, name)
-				winreg.SetValueEx(verb_key, 'MUIVerb', 0, winreg.REG_SZ, name)
-
-				if icon and icon.strip():
-					winreg.SetValueEx(verb_key, 'Icon', 0, winreg.REG_SZ, icon.strip())
-
-				if position in ('Top', 'Bottom'):
-					winreg.SetValueEx(verb_key, 'Position', 0, winreg.REG_SZ, position)
-
-			with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, cmd_path, 0, winreg.KEY_SET_VALUE) as cmd_key:
-				winreg.SetValueEx(cmd_key, '', 0, winreg.REG_SZ, command.strip())
-
+			self._write_custom_verb_keys(verb_path, cmd_path, name, command, icon, position)
 			return True, f'Successfully added "{name}" to {category}'
 		except OSError as e:
 			return False, f'Failed to add custom item: {e}'
+
+	@staticmethod
+	def _write_custom_verb_keys(
+		verb_path: str,
+		cmd_path: str,
+		name: str,
+		command: str,
+		icon: str | None,
+		position: str | None
+	) -> None:
+		with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, verb_path, 0, winreg.KEY_SET_VALUE) as verb_key:
+			winreg.SetValueEx(verb_key, '', 0, winreg.REG_SZ, name)
+			winreg.SetValueEx(verb_key, 'MUIVerb', 0, winreg.REG_SZ, name)
+
+			if icon and icon.strip():
+				winreg.SetValueEx(verb_key, 'Icon', 0, winreg.REG_SZ, icon.strip())
+
+			if position in ('Top', 'Bottom'):
+				winreg.SetValueEx(verb_key, 'Position', 0, winreg.REG_SZ, position)
+
+		with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, cmd_path, 0, winreg.KEY_SET_VALUE) as cmd_key:
+			winreg.SetValueEx(cmd_key, '', 0, winreg.REG_SZ, command.strip())
