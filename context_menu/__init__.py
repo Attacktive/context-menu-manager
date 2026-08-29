@@ -1,3 +1,5 @@
-from .registry_manager import RegistryManager, MenuItem
+"""Context menu management package for Windows."""
 
-__all__ = ['RegistryManager', 'MenuItem']
+from .registry_manager import MenuItem, RegistryManager
+
+__all__ = ['MenuItem', 'RegistryManager']

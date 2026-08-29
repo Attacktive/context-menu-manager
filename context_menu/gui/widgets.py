@@ -1,17 +1,32 @@
+"""Reusable UI widgets for search, item table, and status indicators."""
+
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import ttk
-from typing import Callable, List, Optional, Dict
+from typing import ClassVar
+
 from ..registry_manager import MenuItem
 from .theme import Theme
 
-class SearchBar(ttk.Frame):
-	def __init__(self, parent, on_search_changed: Callable[[str], None], **kwargs):
-		super().__init__(parent, style='Card.TFrame', **kwargs)
+
+class SearchBar(tk.Frame):
+	"""Search input bar with instant callback and clear button."""
+
+	def __init__(self, parent: tk.Widget, on_search_changed: Callable[[str], None], **kwargs) -> None:
+		"""Initialize the search bar with parent container and change callback."""
+		super().__init__(parent, bg=Theme.BG_PANEL, **kwargs)
 		self.on_search_changed = on_search_changed
 		self.search_var = tk.StringVar()
 		self.search_var.trace_add('write', self._on_text_change)
 
-		lbl = ttk.Label(self, text='🔍 Search:', style='Card.TLabel', font=Theme.FONT_BOLD)
+		lbl = tk.Label(
+			self,
+			text='🔍 Search:',
+			bg=Theme.BG_PANEL,
+			fg=Theme.TEXT_PRIMARY,
+			font=Theme.FONT_BOLD
+		)
+
 		lbl.pack(side=tk.LEFT, padx=(10, 6), pady=8)
 
 		self.entry = tk.Entry(
@@ -44,43 +59,48 @@ class SearchBar(ttk.Frame):
 
 		self.clear_btn.pack(side=tk.RIGHT, padx=(4, 10), pady=8)
 
-	def _on_text_change(self, *args):
+	def _on_text_change(self, *_) -> None:
 		query = self.search_var.get().strip()
 		self.on_search_changed(query)
 
-	def clear(self):
+	def clear(self) -> None:
+		"""Clear the search input and refocus the entry box."""
 		self.search_var.set('')
 		self.entry.focus_set()
 
 	def get_text(self) -> str:
+		"""Get the trimmed current search query text."""
 		return self.search_var.get().strip()
 
-class ItemTable(ttk.Frame):
-	COLUMNS = ('status', 'name', 'type', 'root', 'command')
+
+class ItemTable(tk.Frame):
+	"""Treeview table displaying context menu items with status, type, and command."""
+
+	COLUMNS: ClassVar[tuple[str, ...]] = ('status', 'name', 'type', 'root', 'command')
 
 	def __init__(
 		self,
-		parent,
+		parent: tk.Widget,
 		on_toggle: Callable[[MenuItem], None],
 		on_delete: Callable[[MenuItem], None],
 		on_open_regedit: Callable[[MenuItem], None],
 		on_details: Callable[[MenuItem], None],
 		**kwargs
-	):
-		super().__init__(parent, **kwargs)
+	) -> None:
+		"""Initialize the item table with row action callbacks."""
+		super().__init__(parent, bg=Theme.BG_DARK, **kwargs)
 		self.on_toggle = on_toggle
 		self.on_delete = on_delete
 		self.on_open_regedit = on_open_regedit
 		self.on_details = on_details
 
-		self.items_by_row_id: Dict[str, MenuItem] = {}
-		self.all_items: List[MenuItem] = []
+		self.items_by_row_id: dict[str, MenuItem] = {}
+		self.all_items: list[MenuItem] = []
 		self.current_filter: str = ''
 
 		self._setup_ui()
 		self._setup_context_menu()
-
-	def _setup_ui(self):
+	def _setup_ui(self) -> None:
 		self.tree = ttk.Treeview(
 			self,
 			columns=self.COLUMNS,
@@ -114,7 +134,7 @@ class ItemTable(ttk.Frame):
 		self.tree.bind('<space>', self._on_space_key)
 		self.tree.bind('<Delete>', self._on_delete_key)
 
-	def _setup_context_menu(self):
+	def _setup_context_menu(self) -> None:
 		self.context_menu = tk.Menu(
 			self,
 			tearoff=0,
@@ -127,64 +147,78 @@ class ItemTable(ttk.Frame):
 			bd=1
 		)
 
-	def _on_double_click(self, event):
+	def _on_double_click(self, _event: tk.Event) -> None:
 		selected = self.get_selected_item()
 		if selected is not None:
 			self.on_toggle(selected)
 
-	def _on_space_key(self, event):
+	def _on_space_key(self, _event: tk.Event) -> str | None:
 		selected = self.get_selected_item()
 		if selected is not None:
 			self.on_toggle(selected)
 			return 'break'
 
-	def _on_delete_key(self, event):
+		return None
+
+	def _on_delete_key(self, _event: tk.Event) -> str | None:
 		selected = self.get_selected_item()
 		if selected is not None:
 			self.on_delete(selected)
 			return 'break'
 
-	def _on_right_click(self, event):
+		return None
+
+	def _on_right_click(self, event: tk.Event) -> None:
 		row_id = self.tree.identify_row(event.y)
-		if row_id:
-			self.tree.selection_set(row_id)
-			item = self.items_by_row_id.get(row_id)
-			if item is not None:
-				self.context_menu.delete(0, tk.END)
-				toggle_label = '🟢 Enable Item'
-				if item.is_enabled:
-					toggle_label = '⚪ Disable Item'
+		if not row_id:
+			return
 
-				self.context_menu.add_command(label=toggle_label, command=lambda: self.on_toggle(item))
-				self.context_menu.add_separator()
-				self.context_menu.add_command(label='🔍 Open in RegEdit', command=lambda: self.on_open_regedit(item))
-				self.context_menu.add_command(label='📋 View Details', command=lambda: self.on_details(item))
-				self.context_menu.add_separator()
-				self.context_menu.add_command(label='🗑️ Delete Item (with Backup)', command=lambda: self.on_delete(item))
-				self.context_menu.post(event.x_root, event.y_root)
+		self.tree.selection_set(row_id)
+		item = self.items_by_row_id.get(row_id)
+		if item is None:
+			return
 
-	def set_items(self, items: List[MenuItem]):
+		self.context_menu.delete(0, tk.END)
+		toggle_label = '🟢 Enable Item'
+		if item.is_enabled:
+			toggle_label = '⚪ Disable Item'
+
+		self.context_menu.add_command(label=toggle_label, command=lambda: self.on_toggle(item))
+		self.context_menu.add_separator()
+		self.context_menu.add_command(label='🔍 Open in RegEdit', command=lambda: self.on_open_regedit(item))
+		self.context_menu.add_command(label='📋 View Details', command=lambda: self.on_details(item))
+		self.context_menu.add_separator()
+		self.context_menu.add_command(label='🗑️ Delete Item (with Backup)', command=lambda: self.on_delete(item))
+		self.context_menu.post(event.x_root, event.y_root)
+
+	def set_items(self, items: list[MenuItem]) -> None:
+		"""Populate the table with new items and re-apply active filters."""
 		self.all_items = items
 		self.apply_filter(self.current_filter)
 
-	def apply_filter(self, query: str):
+	def _matches_filter(self, item: MenuItem, query: str) -> bool:
+		if not query:
+			return True
+
+		lowered = query.lower()
+		return (
+			lowered in item.name.lower() or
+			lowered in item.command.lower() or
+			lowered in item.clsid.lower() or
+			lowered in item.key_path.lower()
+		)
+
+	def apply_filter(self, query: str) -> None:
+		"""Filter displayed items by matching against name, command, CLSID, or key path."""
 		self.current_filter = query.lower()
 		selected_key = self.get_selected_item_id()
 
 		self.tree.delete(*self.tree.get_children())
 		self.items_by_row_id.clear()
 
-		for idx, item in enumerate(self.all_items):
-			if self.current_filter:
-				matches = (
-					self.current_filter in item.name.lower() or
-					self.current_filter in item.command.lower() or
-					self.current_filter in item.clsid.lower() or
-					self.current_filter in item.key_path.lower()
-				)
-
-				if not matches:
-					continue
+		for item in self.all_items:
+			if not self._matches_filter(item, self.current_filter):
+				continue
 
 			status_text = '⚪ Disabled'
 			tag = 'disabled'
@@ -209,24 +243,39 @@ class ItemTable(ttk.Frame):
 				self.tree.selection_set(row_id)
 				self.tree.see(row_id)
 
-	def get_selected_item(self) -> Optional[MenuItem]:
+	def get_selected_item(self) -> MenuItem | None:
+		"""Get the currently selected MenuItem instance, or None if no selection."""
 		selected = self.tree.selection()
 		if not selected:
 			return None
+
 		return self.items_by_row_id.get(selected[0])
 
-	def get_selected_item_id(self) -> Optional[str]:
+	def get_selected_item_id(self) -> str | None:
+		"""Get the unique ID of the currently selected item."""
 		item = self.get_selected_item()
 		if item is not None:
 			return item.id
+
 		return None
 
-class StatusBar(ttk.Frame):
-	def __init__(self, parent, on_relaunch_admin: Callable[[], None], **kwargs):
-		super().__init__(parent, style='Card.TFrame', **kwargs)
+
+class StatusBar(tk.Frame):
+	"""Application status bar with status messages, item counts, and admin status button."""
+
+	def __init__(self, parent: tk.Widget, on_relaunch_admin: Callable[[], None], **kwargs) -> None:
+		"""Initialize status bar with admin elevation handler."""
+		super().__init__(parent, bg=Theme.BG_PANEL, **kwargs)
 		self.on_relaunch_admin = on_relaunch_admin
 
-		self.status_label = ttk.Label(self, text='Ready', style='Card.TLabel')
+		self.status_label = tk.Label(
+			self,
+			text='Ready',
+			bg=Theme.BG_PANEL,
+			fg=Theme.TEXT_PRIMARY,
+			font=Theme.FONT_NORMAL
+		)
+
 		self.status_label.pack(side=tk.LEFT, padx=10, pady=6)
 
 		self.admin_btn = tk.Button(
@@ -247,13 +296,22 @@ class StatusBar(ttk.Frame):
 
 		self.admin_btn.pack(side=tk.RIGHT, padx=10, pady=4)
 
-		self.counts_label = ttk.Label(self, text='0 items', style='CardMuted.TLabel')
+		self.counts_label = tk.Label(
+			self,
+			text='0 items',
+			bg=Theme.BG_PANEL,
+			fg=Theme.TEXT_MUTED,
+			font=Theme.FONT_SMALL
+		)
+
 		self.counts_label.pack(side=tk.RIGHT, padx=10, pady=6)
 
-	def set_counts(self, total: int, enabled: int, disabled: int):
+	def set_counts(self, total: int, enabled: int, disabled: int) -> None:
+		"""Update item count metrics in the status bar."""
 		self.counts_label.configure(text=f'Total: {total} | 🟢 {enabled} | ⚪ {disabled}')
 
-	def set_admin_status(self, is_admin: bool):
+	def set_admin_status(self, is_admin: bool) -> None:
+		"""Update admin privilege badge display."""
 		if is_admin:
 			self.admin_btn.configure(
 				text='🛡️ Administrator Mode',
@@ -269,7 +327,8 @@ class StatusBar(ttk.Frame):
 				cursor='hand2'
 			)
 
-	def set_message(self, message: str, color: Optional[str] = None):
+	def set_message(self, message: str, color: str | None = None) -> None:
+		"""Set status bar message with optional highlight color."""
 		self.status_label.configure(text=message)
 		if color:
 			self.status_label.configure(foreground=color)

@@ -1,63 +1,73 @@
+"""Modern dark theme styling for Tkinter and ttk widgets."""
+
 import tkinter as tk
 from tkinter import ttk
+from typing import ClassVar
+
 
 class Theme:
-	# Modern Fluent / Slate Dark Palette
-	BG_DARK = '#181825'
-	BG_PANEL = '#1e1e2e'
-	BG_CARD = '#252538'
-	BG_INPUT = '#313244'
-	BORDER_COLOR = '#45475a'
+	"""Modern Fluent / Slate Dark Palette configuration."""
 
-	TEXT_PRIMARY = '#cdd6f4'
-	TEXT_MUTED = '#a6adc8'
-	TEXT_DISABLED = '#6c7086'
+	BG_DARK: ClassVar[str] = '#181825'
+	BG_PANEL: ClassVar[str] = '#1e1e2e'
+	BG_CARD: ClassVar[str] = '#252538'
+	BG_INPUT: ClassVar[str] = '#313244'
+	BORDER_COLOR: ClassVar[str] = '#45475a'
 
-	ACCENT_BLUE = '#89b4fa'
-	ACCENT_HOVER = '#b4befe'
-	ACCENT_GREEN = '#a6e3a1'
-	ACCENT_RED = '#f38ba8'
-	ACCENT_ORANGE = '#fab387'
-	ACCENT_PURPLE = '#cba6f7'
+	TEXT_PRIMARY: ClassVar[str] = '#cdd6f4'
+	TEXT_MUTED: ClassVar[str] = '#a6adc8'
+	TEXT_DISABLED: ClassVar[str] = '#6c7086'
 
-	FONT_FAMILY = 'Segoe UI'
-	FONT_TITLE = (FONT_FAMILY, 14, 'bold')
-	FONT_SUBTITLE = (FONT_FAMILY, 10, 'normal')
-	FONT_HEADER = (FONT_FAMILY, 11, 'bold')
-	FONT_NORMAL = (FONT_FAMILY, 10, 'normal')
-	FONT_BOLD = (FONT_FAMILY, 10, 'bold')
-	FONT_SMALL = (FONT_FAMILY, 9, 'normal')
-	FONT_CODE = ('Consolas', 9, 'normal')
+	ACCENT_BLUE: ClassVar[str] = '#89b4fa'
+	ACCENT_HOVER: ClassVar[str] = '#b4befe'
+	ACCENT_GREEN: ClassVar[str] = '#a6e3a1'
+	ACCENT_RED: ClassVar[str] = '#f38ba8'
+	ACCENT_ORANGE: ClassVar[str] = '#fab387'
+	ACCENT_PURPLE: ClassVar[str] = '#cba6f7'
+
+	FONT_FAMILY: ClassVar[str] = 'Segoe UI'
+	FONT_TITLE: ClassVar[tuple[str, int, str]] = (FONT_FAMILY, 14, 'bold')
+	FONT_SUBTITLE: ClassVar[tuple[str, int, str]] = (FONT_FAMILY, 10, 'normal')
+	FONT_HEADER: ClassVar[tuple[str, int, str]] = (FONT_FAMILY, 11, 'bold')
+	FONT_NORMAL: ClassVar[tuple[str, int, str]] = (FONT_FAMILY, 10, 'normal')
+	FONT_BOLD: ClassVar[tuple[str, int, str]] = (FONT_FAMILY, 10, 'bold')
+	FONT_SMALL: ClassVar[tuple[str, int, str]] = (FONT_FAMILY, 9, 'normal')
+	FONT_CODE: ClassVar[tuple[str, int, str]] = ('Consolas', 9, 'normal')
 
 	@classmethod
-	def apply(cls, root: tk.Tk):
+	def apply(cls, root: tk.Tk) -> None:
+		"""Apply the modern dark theme styling to the given Tk root window."""
 		root.configure(bg=cls.BG_DARK)
-
 		style = ttk.Style(root)
+
 		try:
 			style.theme_use('clam')
-		except Exception:
+		except tk.TclError:
 			pass
 
-		# Base Frame
+		cls._apply_frames_and_labels(style)
+		cls._apply_buttons(style)
+		cls._apply_notebook_and_treeview(style)
+		cls._apply_inputs_and_scrollbars(style)
+
+	@classmethod
+	def _apply_frames_and_labels(cls, style: ttk.Style) -> None:
 		style.configure('TFrame', background=cls.BG_DARK)
 		style.configure('Card.TFrame', background=cls.BG_PANEL, relief='flat')
 		style.configure('Border.TFrame', background=cls.BORDER_COLOR)
 
-		# Label
 		style.configure('TLabel', background=cls.BG_DARK, foreground=cls.TEXT_PRIMARY, font=cls.FONT_NORMAL)
 		style.configure('Card.TLabel', background=cls.BG_PANEL, foreground=cls.TEXT_PRIMARY, font=cls.FONT_NORMAL)
-		style.configure('Muted.TLabel', background=cls.BG_DARK, foreground=cls.TEXT_MUTED, font=cls.FONT_SMALL)
-		style.configure('CardMuted.TLabel', background=cls.BG_PANEL, foreground=cls.TEXT_MUTED, font=cls.FONT_SMALL)
-		style.configure('Title.TLabel', background=cls.BG_DARK, foreground=cls.TEXT_PRIMARY, font=cls.FONT_TITLE)
-		style.configure('Header.TLabel', background=cls.BG_PANEL, foreground=cls.ACCENT_BLUE, font=cls.FONT_HEADER)
+		style.configure('Muted.TLabel', background=cls.BG_PANEL, foreground=cls.TEXT_MUTED, font=cls.FONT_SMALL)
+		style.configure('Header.TLabel', background=cls.BG_PANEL, foreground=cls.TEXT_PRIMARY, font=cls.FONT_HEADER)
 
-		# Buttons
+	@classmethod
+	def _apply_buttons(cls, style: ttk.Style) -> None:
 		style.configure(
 			'TButton',
 			background=cls.BG_INPUT,
 			foreground=cls.TEXT_PRIMARY,
-			font=cls.FONT_BOLD,
+			font=cls.FONT_NORMAL,
 			borderwidth=0,
 			focuscolor='none',
 			padding=(10, 6)
@@ -65,11 +75,10 @@ class Theme:
 
 		style.map(
 			'TButton',
-			background=[('active', cls.BORDER_COLOR), ('pressed', cls.BG_CARD), ('disabled', cls.BG_PANEL)],
-			foreground=[('disabled', cls.TEXT_DISABLED)]
+			background=[('active', cls.BORDER_COLOR), ('pressed', cls.BG_CARD)],
+			foreground=[('active', '#ffffff')]
 		)
 
-		# Primary Accent Button
 		style.configure(
 			'Primary.TButton',
 			background=cls.ACCENT_BLUE,
@@ -82,11 +91,9 @@ class Theme:
 
 		style.map(
 			'Primary.TButton',
-			background=[('active', cls.ACCENT_HOVER), ('pressed', '#74c7ec'), ('disabled', cls.BG_INPUT)],
-			foreground=[('disabled', cls.TEXT_DISABLED)]
+			background=[('active', cls.ACCENT_HOVER), ('pressed', cls.ACCENT_BLUE)]
 		)
 
-		# Danger Red Button
 		style.configure(
 			'Danger.TButton',
 			background=cls.ACCENT_RED,
@@ -99,11 +106,9 @@ class Theme:
 
 		style.map(
 			'Danger.TButton',
-			background=[('active', '#eba0ac'), ('pressed', '#f38ba8'), ('disabled', cls.BG_INPUT)],
-			foreground=[('disabled', cls.TEXT_DISABLED)]
+			background=[('active', '#f5c2e7'), ('pressed', cls.ACCENT_RED)]
 		)
 
-		# Success Green Button
 		style.configure(
 			'Success.TButton',
 			background=cls.ACCENT_GREEN,
@@ -116,16 +121,16 @@ class Theme:
 
 		style.map(
 			'Success.TButton',
-			background=[('active', '#94e2d5'), ('pressed', '#a6e3a1'), ('disabled', cls.BG_INPUT)],
-			foreground=[('disabled', cls.TEXT_DISABLED)]
+			background=[('active', '#a6e3a1'), ('pressed', cls.ACCENT_GREEN)]
 		)
 
-		# Notebook (Tabs)
+	@classmethod
+	def _apply_notebook_and_treeview(cls, style: ttk.Style) -> None:
 		style.configure(
 			'TNotebook',
 			background=cls.BG_DARK,
 			borderwidth=0,
-			tabmargins=[4, 4, 4, 0]
+			tabmargins=(0, 0, 0, 0)
 		)
 
 		style.configure(
@@ -139,12 +144,11 @@ class Theme:
 
 		style.map(
 			'TNotebook.Tab',
-			background=[('selected', cls.BG_CARD), ('active', cls.BG_INPUT)],
+			background=[('selected', cls.BG_CARD), ('active', cls.BORDER_COLOR)],
 			foreground=[('selected', cls.ACCENT_BLUE), ('active', cls.TEXT_PRIMARY)],
-			expand=[('selected', [0, 2, 0, 0])]
+			focuscolor=[('selected', 'none')]
 		)
 
-		# Treeview (Items List)
 		style.configure(
 			'Treeview',
 			background=cls.BG_PANEL,
@@ -160,14 +164,8 @@ class Theme:
 			background=cls.BG_INPUT,
 			foreground=cls.TEXT_PRIMARY,
 			font=cls.FONT_BOLD,
-			borderwidth=0,
-			padding=(8, 6)
-		)
-
-		style.map(
-			'Treeview',
-			background=[('selected', cls.BG_INPUT)],
-			foreground=[('selected', cls.ACCENT_BLUE)]
+			relief='flat',
+			padding=(6, 6)
 		)
 
 		style.map(
@@ -175,7 +173,8 @@ class Theme:
 			background=[('active', cls.BORDER_COLOR)]
 		)
 
-		# Entry
+	@classmethod
+	def _apply_inputs_and_scrollbars(cls, style: ttk.Style) -> None:
 		style.configure(
 			'TEntry',
 			fieldbackground=cls.BG_INPUT,
@@ -185,7 +184,6 @@ class Theme:
 			padding=(8, 6)
 		)
 
-		# Checkbutton
 		style.configure(
 			'TCheckbutton',
 			background=cls.BG_PANEL,
@@ -200,7 +198,6 @@ class Theme:
 			foreground=[('active', cls.ACCENT_BLUE)]
 		)
 
-		# Scrollbar
 		style.configure(
 			'Vertical.TScrollbar',
 			background=cls.BG_PANEL,
