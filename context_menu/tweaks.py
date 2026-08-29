@@ -78,21 +78,17 @@ class SystemTweaks:
 		try:
 			cls.notify_shell_change()
 
-			sys_root = os.environ.get('SystemRoot', r'C:\Windows')
-			taskkill_path = os.path.join(sys_root, 'System32', 'taskkill.exe')
-			explorer_path = os.path.join(sys_root, 'explorer.exe')
-
 			subprocess.run(  # nosec B603
-				[taskkill_path, '/f', '/im', 'explorer.exe'],
+				[r'C:\Windows\System32\taskkill.exe', '/f', '/im', 'explorer.exe'],
 				capture_output=True,
 				check=False
 			)
 
 			time.sleep(0.5)
 
-			res = ctypes.windll.shell32.ShellExecuteW(None, 'open', explorer_path, None, None, 1)
+			res = ctypes.windll.shell32.ShellExecuteW(None, 'open', r'C:\Windows\explorer.exe', None, None, 1)
 			if res <= 32:
-				os.startfile(explorer_path)  # nosec B606
+				os.startfile(r'C:\Windows\explorer.exe')  # nosec B606
 
 			return True, 'Windows Explorer restarted successfully!'
 		except OSError as e:
@@ -110,9 +106,7 @@ class SystemTweaks:
 			with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, regedit_lastkey_path, 0, winreg.KEY_SET_VALUE) as key:
 				winreg.SetValueEx(key, 'LastKey', 0, winreg.REG_SZ, full_key)
 
-			sys_root = os.environ.get('SystemRoot', r'C:\Windows')
-			regedit_path = os.path.join(sys_root, 'regedit.exe')
-			subprocess.Popen([regedit_path, '/m'])  # nosec B603
+			subprocess.Popen([r'C:\Windows\regedit.exe', '/m'])  # nosec B603
 
 			return True, f'Opened RegEdit at {full_key}'
 		except OSError as e:

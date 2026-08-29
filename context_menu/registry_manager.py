@@ -343,17 +343,31 @@ class RegistryManager:
 		return name, clsid, command, is_enabled
 
 	@staticmethod
+	def _get_key_alias(key_name: str, clsid: str) -> str | None:
+		clean_key = key_name.strip()
+		if not clean_key or clean_key == clsid:
+			return None
+
+		return clean_key
+
+	@classmethod
 	def _format_shellex_name(
+		cls,
 		key_name: str,
 		clsid: str,
 		friendly_name: str | None,
 		file_desc: str | None
 	) -> str:
-		clean_key = key_name.strip()
-		alias = None
-		if clean_key and clean_key != clsid:
-			alias = clean_key
+		alias = cls._get_key_alias(key_name, clsid)
+		return cls._compose_shellex_label(clsid, friendly_name, file_desc, alias)
 
+	@staticmethod
+	def _compose_shellex_label(
+		clsid: str,
+		friendly_name: str | None,
+		file_desc: str | None,
+		alias: str | None
+	) -> str:
 		if friendly_name and file_desc and friendly_name != file_desc:
 			return f'{friendly_name} [{file_desc}]'
 
