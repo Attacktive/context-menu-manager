@@ -24,28 +24,8 @@ ij_editorconfig_space_before_colon = false
 ij_editorconfig_space_before_comma = false
 ij_editorconfig_spaces_around_assignment_operators = true
 
-[*.py]
-indent_size = 2
-indent_style = tab
-tab_width = 2
-
-[{*.bash,*.bat,*.cmd,*.sh,*.zsh}]
-indent_size = 2
-indent_style = tab
-tab_width = 2
-
-[{*.json,*.jsonc}]
-indent_size = 2
-indent_style = tab
-tab_width = 2
-
 [{*.markdown,*.md}]
-indent_size = 2
-indent_style = tab
-tab_width = 2
 trim_trailing_whitespace = false
 
-[{*.toml,*.yaml,*.yml}]
-indent_size = 2
+[{*.yaml,*.yml}]
 indent_style = tab
-tab_width = 2
