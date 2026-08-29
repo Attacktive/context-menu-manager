@@ -46,7 +46,8 @@ class Theme:
 			pass
 
 		cls._apply_frames_and_labels(style)
-		cls._apply_buttons(style)
+		cls._apply_standard_buttons(style)
+		cls._apply_accent_buttons(style)
 		cls._apply_notebook_and_treeview(style)
 		cls._apply_inputs_and_scrollbars(style)
 
@@ -62,7 +63,7 @@ class Theme:
 		style.configure('Header.TLabel', background=cls.BG_PANEL, foreground=cls.TEXT_PRIMARY, font=cls.FONT_HEADER)
 
 	@classmethod
-	def _apply_buttons(cls, style: ttk.Style) -> None:
+	def _apply_standard_buttons(cls, style: ttk.Style) -> None:
 		style.configure(
 			'TButton',
 			background=cls.BG_INPUT,
@@ -79,6 +80,8 @@ class Theme:
 			foreground=[('active', '#ffffff')]
 		)
 
+	@classmethod
+	def _apply_accent_buttons(cls, style: ttk.Style) -> None:
 		style.configure(
 			'Primary.TButton',
 			background=cls.ACCENT_BLUE,

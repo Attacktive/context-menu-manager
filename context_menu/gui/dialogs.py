@@ -81,11 +81,17 @@ class AddCustomItemDialog(tk.Toplevel):
 		form_frame = ttk.Frame(parent, style='Card.TFrame', padding=14)
 		form_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 14))
 
-		# Target Category
-		ttk.Label(form_frame, text='Target Category:', style='Card.TLabel', font=Theme.FONT_BOLD).grid(row=0, column=0, sticky=tk.W, pady=6)
+		self._setup_category_and_name_inputs(form_frame)
+		self._setup_cmd_and_icon_inputs(form_frame)
+		self._setup_position_input(form_frame)
+
+		form_frame.columnconfigure(1, weight=1)
+
+	def _setup_category_and_name_inputs(self, frame: ttk.Frame) -> None:
+		ttk.Label(frame, text='Target Category:', style='Card.TLabel', font=Theme.FONT_BOLD).grid(row=0, column=0, sticky=tk.W, pady=6)
 		self.category_var = tk.StringVar(value='folders')
 		self.cat_combo = ttk.Combobox(
-			form_frame,
+			frame,
 			textvariable=self.category_var,
 			values=['files', 'folders', 'background', 'drives'],
 			state='readonly',
@@ -94,10 +100,9 @@ class AddCustomItemDialog(tk.Toplevel):
 
 		self.cat_combo.grid(row=0, column=1, columnspan=2, sticky=tk.EW, pady=6, padx=(10, 0))
 
-		# Menu Item Name
-		ttk.Label(form_frame, text='Menu Label / Name:', style='Card.TLabel', font=Theme.FONT_BOLD).grid(row=1, column=0, sticky=tk.W, pady=6)
+		ttk.Label(frame, text='Menu Label / Name:', style='Card.TLabel', font=Theme.FONT_BOLD).grid(row=1, column=0, sticky=tk.W, pady=6)
 		self.name_entry = tk.Entry(
-			form_frame,
+			frame,
 			bg=Theme.BG_INPUT,
 			fg=Theme.TEXT_PRIMARY,
 			insertbackground=Theme.TEXT_PRIMARY,
@@ -107,10 +112,10 @@ class AddCustomItemDialog(tk.Toplevel):
 
 		self.name_entry.grid(row=1, column=1, columnspan=2, sticky=tk.EW, pady=6, padx=(10, 0), ipady=3)
 
-		# Command
-		ttk.Label(form_frame, text='Command Line:', style='Card.TLabel', font=Theme.FONT_BOLD).grid(row=2, column=0, sticky=tk.W, pady=6)
+	def _setup_cmd_and_icon_inputs(self, frame: ttk.Frame) -> None:
+		ttk.Label(frame, text='Command Line:', style='Card.TLabel', font=Theme.FONT_BOLD).grid(row=2, column=0, sticky=tk.W, pady=6)
 		self.command_entry = tk.Entry(
-			form_frame,
+			frame,
 			bg=Theme.BG_INPUT,
 			fg=Theme.TEXT_PRIMARY,
 			insertbackground=Theme.TEXT_PRIMARY,
@@ -121,7 +126,7 @@ class AddCustomItemDialog(tk.Toplevel):
 		self.command_entry.grid(row=2, column=1, sticky=tk.EW, pady=6, padx=(10, 4), ipady=3)
 
 		browse_cmd_btn = tk.Button(
-			form_frame,
+			frame,
 			text='Browse...',
 			command=self._browse_command,
 			bg=Theme.BG_INPUT,
@@ -137,10 +142,9 @@ class AddCustomItemDialog(tk.Toplevel):
 
 		browse_cmd_btn.grid(row=2, column=2, sticky=tk.E, pady=6)
 
-		# Icon
-		ttk.Label(form_frame, text='Icon (Optional):', style='Card.TLabel').grid(row=3, column=0, sticky=tk.W, pady=6)
+		ttk.Label(frame, text='Icon (Optional):', style='Card.TLabel').grid(row=3, column=0, sticky=tk.W, pady=6)
 		self.icon_entry = tk.Entry(
-			form_frame,
+			frame,
 			bg=Theme.BG_INPUT,
 			fg=Theme.TEXT_PRIMARY,
 			insertbackground=Theme.TEXT_PRIMARY,
@@ -151,7 +155,7 @@ class AddCustomItemDialog(tk.Toplevel):
 		self.icon_entry.grid(row=3, column=1, sticky=tk.EW, pady=6, padx=(10, 4), ipady=3)
 
 		browse_icon_btn = tk.Button(
-			form_frame,
+			frame,
 			text='Browse...',
 			command=self._browse_icon,
 			bg=Theme.BG_INPUT,
@@ -167,11 +171,11 @@ class AddCustomItemDialog(tk.Toplevel):
 
 		browse_icon_btn.grid(row=3, column=2, sticky=tk.E, pady=6)
 
-		# Position
-		ttk.Label(form_frame, text='Menu Position:', style='Card.TLabel').grid(row=4, column=0, sticky=tk.W, pady=6)
+	def _setup_position_input(self, frame: ttk.Frame) -> None:
+		ttk.Label(frame, text='Menu Position:', style='Card.TLabel').grid(row=4, column=0, sticky=tk.W, pady=6)
 		self.pos_var = tk.StringVar(value='Default')
 		self.pos_combo = ttk.Combobox(
-			form_frame,
+			frame,
 			textvariable=self.pos_var,
 			values=['Default', 'Top', 'Bottom'],
 			state='readonly',
@@ -179,8 +183,6 @@ class AddCustomItemDialog(tk.Toplevel):
 		)
 
 		self.pos_combo.grid(row=4, column=1, columnspan=2, sticky=tk.EW, pady=6, padx=(10, 0))
-
-		form_frame.columnconfigure(1, weight=1)
 
 	def _setup_buttons_frame(self, parent: ttk.Frame) -> None:
 		btn_frame = ttk.Frame(parent, style='TFrame')
@@ -284,7 +286,11 @@ class ItemDetailsDialog(tk.Toplevel):
 		title_lbl = ttk.Label(main_frame, text=f'📋 {self.item.name}', style='Header.TLabel')
 		title_lbl.pack(anchor=tk.W, pady=(0, 10))
 
-		card = ttk.Frame(main_frame, style='Card.TFrame', padding=14)
+		self._setup_card_frame(main_frame)
+		self._setup_action_buttons(main_frame)
+
+	def _setup_card_frame(self, parent: ttk.Frame) -> None:
+		card = ttk.Frame(parent, style='Card.TFrame', padding=14)
 		card.pack(fill=tk.BOTH, expand=True, pady=(0, 14))
 
 		item_type_label = 'Shell Extension (COM)'
@@ -337,7 +343,8 @@ class ItemDetailsDialog(tk.Toplevel):
 
 		card.columnconfigure(1, weight=1)
 
-		btn_frame = ttk.Frame(main_frame, style='TFrame')
+	def _setup_action_buttons(self, parent: ttk.Frame) -> None:
+		btn_frame = ttk.Frame(parent, style='TFrame')
 		btn_frame.pack(fill=tk.X)
 
 		close_btn = ttk.Button(btn_frame, text='Close', command=self.destroy)

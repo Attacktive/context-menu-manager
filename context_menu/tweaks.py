@@ -1,7 +1,8 @@
 """Windows system tweaks and Explorer integration helpers."""
 
 import ctypes
-import subprocess
+import os
+import subprocess  # nosec B404
 import sys
 import time
 import winreg
@@ -77,8 +78,11 @@ class SystemTweaks:
 		try:
 			cls.notify_shell_change()
 
-			subprocess.run(
-				['taskkill', '/f', '/im', 'explorer.exe'],
+			sys_root = os.environ.get('SystemRoot', r'C:\Windows')
+			taskkill_path = os.path.join(sys_root, 'System32', 'taskkill.exe')
+
+			subprocess.run(  # nosec B603
+				[taskkill_path, '/f', '/im', 'explorer.exe'],
 				capture_output=True,
 				check=False
 			)
@@ -87,7 +91,7 @@ class SystemTweaks:
 
 			res = ctypes.windll.shell32.ShellExecuteW(None, 'open', 'explorer.exe', None, None, 1)
 			if res <= 32:
-				subprocess.Popen('start explorer.exe', shell=True)
+				os.startfile('explorer.exe')  # nosec B606
 
 			return True, 'Windows Explorer restarted successfully!'
 		except OSError as e:
@@ -105,7 +109,10 @@ class SystemTweaks:
 			with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, regedit_lastkey_path, 0, winreg.KEY_SET_VALUE) as key:
 				winreg.SetValueEx(key, 'LastKey', 0, winreg.REG_SZ, full_key)
 
-			subprocess.Popen(['regedit.exe', '/m'])
+			sys_root = os.environ.get('SystemRoot', r'C:\Windows')
+			regedit_path = os.path.join(sys_root, 'regedit.exe')
+			subprocess.Popen([regedit_path, '/m'])  # nosec B603
+
 			return True, f'Opened RegEdit at {full_key}'
 		except OSError as e:
 			return False, f'Failed to open RegEdit: {e}'

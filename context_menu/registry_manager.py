@@ -141,28 +141,48 @@ class RegistryManager:
 		for path_suffix, item_type in config['paths']:
 			for root_name, root_hkey, base_classes in roots:
 				full_path = f'{base_classes}\\{path_suffix}'
-				try:
-					with winreg.OpenKey(root_hkey, full_path, 0, winreg.KEY_READ) as parent_key:
-						num_subkeys = winreg.QueryInfoKey(parent_key)[0]
-						for i in range(num_subkeys):
-							subkey_name = winreg.EnumKey(parent_key, i)
-							item_path = f'{full_path}\\{subkey_name}'
-							item = self._parse_item(
-								root_name=root_name,
-								root_hkey=root_hkey,
-								item_path=item_path,
-								key_name=subkey_name,
-								category=category_key,
-								item_type=item_type,
-								blocked_clsids=blocked_clsids
-							)
-
-							if item is not None:
-								items.append(item)
-				except OSError:
-					pass
+				self._scan_subkeys(
+					root_name,
+					root_hkey,
+					full_path,
+					category_key,
+					item_type,
+					blocked_clsids,
+					items
+				)
 
 		return items
+
+	def _scan_subkeys(
+		self,
+		root_name: str,
+		root_hkey: int,
+		full_path: str,
+		category_key: str,
+		item_type: str,
+		blocked_clsids: set[str],
+		out_items: list[MenuItem]
+	) -> None:
+		try:
+			with winreg.OpenKey(root_hkey, full_path, 0, winreg.KEY_READ) as parent_key:
+				num_subkeys = winreg.QueryInfoKey(parent_key)[0]
+				for i in range(num_subkeys):
+					subkey_name = winreg.EnumKey(parent_key, i)
+					item_path = f'{full_path}\\{subkey_name}'
+					item = self._parse_item(
+						root_name=root_name,
+						root_hkey=root_hkey,
+						item_path=item_path,
+						key_name=subkey_name,
+						category=category_key,
+						item_type=item_type,
+						blocked_clsids=blocked_clsids
+					)
+
+					if item is not None:
+						out_items.append(item)
+		except OSError:
+			pass
 
 	def scan_all(self) -> dict[str, list[MenuItem]]:
 		"""Scan all supported context menu categories."""
@@ -185,33 +205,12 @@ class RegistryManager:
 		try:
 			with winreg.OpenKey(root_hkey, item_path, 0, winreg.KEY_READ) as key:
 				num_subkeys, num_values, _ = winreg.QueryInfoKey(key)
+				values_dict = self._read_key_values(key, num_values)
 
-				values_dict: dict[str, tuple[Any, int]] = {}
-				for i in range(num_values):
-					try:
-						v_name, v_data, v_type = winreg.EnumValue(key, i)
-						values_dict[v_name] = (v_data, v_type)
-					except OSError:
-						pass
-
-				name = key_name
+				name, icon = self._extract_display_info(key_name, values_dict)
 				command = ''
-				icon = ''
 				clsid = ''
 				is_enabled = True
-
-				if '' in values_dict:
-					default_val = str(values_dict[''][0])
-					if default_val.strip():
-						name = self._resolve_mui_string(default_val.strip())
-
-				if 'MUIVerb' in values_dict:
-					mui_verb = str(values_dict['MUIVerb'][0])
-					if mui_verb.strip():
-						name = self._resolve_mui_string(mui_verb.strip())
-
-				if 'Icon' in values_dict:
-					icon = str(values_dict['Icon'][0])
 
 				if item_type == 'verb':
 					is_enabled, command = self._parse_verb_item(
@@ -245,6 +244,41 @@ class RegistryManager:
 				)
 		except OSError:
 			return None
+
+	@staticmethod
+	def _read_key_values(key: winreg.HKEYType, num_values: int) -> dict[str, tuple[Any, int]]:
+		values_dict: dict[str, tuple[Any, int]] = {}
+		for i in range(num_values):
+			try:
+				v_name, v_data, v_type = winreg.EnumValue(key, i)
+				values_dict[v_name] = (v_data, v_type)
+			except OSError:
+				pass
+
+		return values_dict
+
+	def _extract_display_info(
+		self,
+		key_name: str,
+		values_dict: dict[str, tuple[Any, int]]
+	) -> tuple[str, str]:
+		name = key_name
+		icon = ''
+
+		if '' in values_dict:
+			default_val = str(values_dict[''][0]).strip()
+			if default_val:
+				name = self._resolve_mui_string(default_val)
+
+		if 'MUIVerb' in values_dict:
+			mui_verb = str(values_dict['MUIVerb'][0]).strip()
+			if mui_verb:
+				name = self._resolve_mui_string(mui_verb)
+
+		if 'Icon' in values_dict:
+			icon = str(values_dict['Icon'][0])
+
+		return name, icon
 
 	def _parse_verb_item(
 		self,
@@ -286,8 +320,6 @@ class RegistryManager:
 		blocked_clsids: set[str]
 	) -> tuple[str, str, str, bool]:
 		clsid = ''
-		is_enabled = True
-
 		if '' in values_dict:
 			raw_clsid = str(values_dict[''][0]).strip()
 			if raw_clsid.startswith('{') and raw_clsid.endswith('}'):
@@ -296,16 +328,13 @@ class RegistryManager:
 		if not clsid and key_name.startswith('{') and key_name.endswith('}'):
 			clsid = key_name
 
-		if clsid:
-			if clsid.upper() in blocked_clsids:
-				is_enabled = False
+		if not clsid:
+			return key_name, '', 'COM Shell Extension', True
 
-			friendly_name, dll_path, file_desc = self._resolve_clsid_info(clsid)
-			name = self._format_shellex_name(key_name, clsid, friendly_name, file_desc)
-			command = dll_path or clsid
-		else:
-			name = key_name
-			command = 'COM Shell Extension'
+		is_enabled = clsid.upper() not in blocked_clsids
+		friendly_name, dll_path, file_desc = self._resolve_clsid_info(clsid)
+		name = self._format_shellex_name(key_name, clsid, friendly_name, file_desc)
+		command = dll_path or clsid
 
 		return name, clsid, command, is_enabled
 
@@ -317,22 +346,24 @@ class RegistryManager:
 		file_desc: str | None
 	) -> str:
 		clean_key = key_name.strip()
-		if friendly_name and file_desc and friendly_name != file_desc:
-			return f'{friendly_name} [{file_desc}]'
+		has_key_alias = bool(clean_key and clean_key != clsid)
 
 		if friendly_name:
-			if clean_key and clean_key != clsid:
+			if file_desc and friendly_name != file_desc:
+				return f'{friendly_name} [{file_desc}]'
+
+			if has_key_alias:
 				return f'{friendly_name} ({clean_key})'
 
 			return friendly_name
 
 		if file_desc:
-			if clean_key and clean_key != clsid:
+			if has_key_alias:
 				return f'{file_desc} ({clean_key})'
 
 			return file_desc
 
-		if clean_key and clean_key != clsid:
+		if has_key_alias:
 			return clean_key
 
 		return f'Extension {clsid}'
@@ -347,31 +378,8 @@ class RegistryManager:
 			(winreg.HKEY_CURRENT_USER, f'Software\\Classes\\CLSID\\{clsid}')
 		]
 
-		reg_name = None
-		dll_path = None
-
-		for root, path in paths:
-			if not reg_name:
-				try:
-					with winreg.OpenKey(root, path, 0, winreg.KEY_READ) as key:
-						val, _ = winreg.QueryValueEx(key, '')
-						if val and str(val).strip():
-							reg_name = str(val).strip()
-				except OSError:
-					pass
-
-			if not dll_path:
-				try:
-					with winreg.OpenKey(root, f'{path}\\InprocServer32', 0, winreg.KEY_READ) as key:
-						val, _ = winreg.QueryValueEx(key, '')
-						if val and str(val).strip():
-							dll_path = str(val).strip()
-				except OSError:
-					pass
-
-			if reg_name and dll_path:
-				break
-
+		reg_name = self._find_clsid_name(paths)
+		dll_path = self._find_clsid_dll(paths)
 		file_desc = None
 		if dll_path:
 			file_desc = self._get_file_description(dll_path)
@@ -380,7 +388,33 @@ class RegistryManager:
 		return friendly_name, dll_path, file_desc
 
 	@staticmethod
-	def _get_file_description(filepath: str) -> str | None:
+	def _find_clsid_name(paths: list[tuple[winreg.HKEYType, str]]) -> str | None:
+		for root, path in paths:
+			try:
+				with winreg.OpenKey(root, path, 0, winreg.KEY_READ) as key:
+					val, _ = winreg.QueryValueEx(key, '')
+					if val and str(val).strip():
+						return str(val).strip()
+			except OSError:
+				pass
+
+		return None
+
+	@staticmethod
+	def _find_clsid_dll(paths: list[tuple[winreg.HKEYType, str]]) -> str | None:
+		for root, path in paths:
+			try:
+				with winreg.OpenKey(root, f'{path}\\InprocServer32', 0, winreg.KEY_READ) as key:
+					val, _ = winreg.QueryValueEx(key, '')
+					if val and str(val).strip():
+						return str(val).strip()
+			except OSError:
+				pass
+
+		return None
+
+	@classmethod
+	def _get_file_description(cls, filepath: str) -> str | None:
 		if not filepath or not os.path.exists(filepath):
 			expanded_path = os.path.expandvars(filepath)
 			if not os.path.exists(expanded_path):
@@ -397,30 +431,34 @@ class RegistryManager:
 			if ctypes.windll.version.GetFileVersionInfoW(filepath, 0, size, res) == 0:
 				return None
 
-			subblocks = [
-				r'\StringFileInfo\040904b0\FileDescription',
-				r'\StringFileInfo\000004b0\FileDescription',
-				r'\StringFileInfo\040904e4\FileDescription',
-				r'\StringFileInfo\040904b0\ProductName',
-				r'\StringFileInfo\040904b0\CompanyName'
-			]
-
-			for subblock in subblocks:
-				lp_buffer = ctypes.c_void_p()
-				u_len = ctypes.c_uint()
-				has_val = ctypes.windll.version.VerQueryValueW(
-					res,
-					subblock,
-					ctypes.byref(lp_buffer),
-					ctypes.byref(u_len)
-				)
-
-				if has_val and u_len.value > 0 and lp_buffer.value:
-					val = ctypes.wstring_at(lp_buffer.value)
-					if val and val.strip():
-						return val.strip()
+			return cls._query_version_subblocks(res)
 		except (AttributeError, OSError, ValueError):
-			pass
+			return None
+
+	@staticmethod
+	def _query_version_subblocks(res: Any) -> str | None:
+		subblocks = [
+			r'\StringFileInfo\040904b0\FileDescription',
+			r'\StringFileInfo\000004b0\FileDescription',
+			r'\StringFileInfo\040904e4\FileDescription',
+			r'\StringFileInfo\040904b0\ProductName',
+			r'\StringFileInfo\040904b0\CompanyName'
+		]
+
+		for subblock in subblocks:
+			lp_buffer = ctypes.c_void_p()
+			u_len = ctypes.c_uint()
+			has_val = ctypes.windll.version.VerQueryValueW(
+				res,
+				subblock,
+				ctypes.byref(lp_buffer),
+				ctypes.byref(u_len)
+			)
+
+			if has_val and u_len.value > 0 and lp_buffer.value:
+				val = ctypes.wstring_at(lp_buffer.value)
+				if val and val.strip():
+					return val.strip()
 
 		return None
 
@@ -455,14 +493,17 @@ class RegistryManager:
 
 		return False, f'Unknown item type: {item.item_type}'
 
-	def _set_verb_enabled(self, item: MenuItem, enable: bool) -> tuple[bool, str]:
-		target_root = winreg.HKEY_CURRENT_USER
+	def _determine_verb_target_root(self, item: MenuItem) -> winreg.HKEYType:
 		if item.root_name == 'HKCU':
-			target_root = winreg.HKEY_CURRENT_USER
-		elif item.root_name == 'HKLM' and self.is_admin():
-			target_root = winreg.HKEY_LOCAL_MACHINE
-		else:
-			target_root = winreg.HKEY_CURRENT_USER
+			return winreg.HKEY_CURRENT_USER
+
+		if item.root_name == 'HKLM' and self.is_admin():
+			return winreg.HKEY_LOCAL_MACHINE
+
+		return winreg.HKEY_CURRENT_USER
+
+	def _set_verb_enabled(self, item: MenuItem, enable: bool) -> tuple[bool, str]:
+		target_root = self._determine_verb_target_root(item)
 
 		try:
 			with winreg.CreateKeyEx(target_root, item.key_path, 0, winreg.KEY_SET_VALUE) as key:
@@ -480,7 +521,8 @@ class RegistryManager:
 					winreg.SetValueEx(key, 'LegacyDisable', 0, winreg.REG_SZ, '')
 
 			item.is_enabled = enable
-			return True, f'Successfully {"enabled" if enable else "disabled"} {item.name}'
+			action_str = 'enabled' if enable else 'disabled'
+			return True, f'Successfully {action_str} {item.name}'
 		except PermissionError:
 			return False, 'Permission denied. Please run the application as Administrator.'
 		except OSError as e:
@@ -507,7 +549,8 @@ class RegistryManager:
 					winreg.SetValueEx(key, clsid, 0, winreg.REG_SZ, item.name)
 
 			item.is_enabled = enable
-			return True, f'Successfully {"enabled" if enable else "disabled"} {item.name}'
+			action_str = 'enabled' if enable else 'disabled'
+			return True, f'Successfully {action_str} {item.name}'
 		except OSError as e:
 			return False, f'Failed to update shell extension status: {e}'
 
@@ -616,10 +659,7 @@ class RegistryManager:
 		if category not in target_map:
 			return False, f'Invalid category: {category}'
 
-		safe_key_name = ''.join(c for c in name if c.isalnum() or c in ('_', '-'))
-		if not safe_key_name:
-			safe_key_name = 'CustomAction'
-
+		safe_key_name = ''.join(c for c in name if c.isalnum() or c in ('_', '-')) or 'CustomAction'
 		verb_path = f'{target_map[category]}\\{safe_key_name}'
 		cmd_path = f'{verb_path}\\command'
 

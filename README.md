@@ -33,9 +33,9 @@ python main.py
 
 ## Keyboard Shortcuts
 
-- <kbd>Space</kbd>: Toggle selected item status (Enable / Disable)
-- <kbd>F5</kbd>: Refresh all items and registry scan
-- <kbd>Delete</kbd>: Delete selected item (prompts to create a JSON backup)
-- <kbd>Ctrl</kbd> + <kbd>N</kbd>: Open "Add Custom Action" dialog
-- <kbd>Ctrl</kbd> + <kbd>R</kbd>: Restart Windows Explorer and flush shell cache
-- <kbd>Ctrl</kbd> + <kbd>F</kbd>: Focus search bar
+- `Space`: Toggle selected item status (Enable / Disable)
+- `F5`: Refresh all items and registry scan
+- `Delete`: Delete selected item (prompts to create a JSON backup)
+- `Ctrl` + `N`: Open "Add Custom Action" dialog
+- `Ctrl` + `R`: Restart Windows Explorer and flush shell cache
+- `Ctrl` + `F`: Focus search bar
